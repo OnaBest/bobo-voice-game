@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>BoBo Bear Kitchen - 语音喂食增强版</title>
+    <style>
+        body { 
+            background: #fff9e6; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            margin: 0; 
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+        
+        #subtitle { 
+            font-size: 24px; 
+            color: #8b4513; 
+            margin-bottom: 20px; 
+            padding: 10px 20px;
+            background: #fff;
+            border-radius: 30px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            min-height: 40px;
+        }
+
+        #stage { 
+            position: relative; 
+            width: 600px; 
+            height: 600px; 
+        }
+        
+        /* 熊：放在中间，z-index 为 5 */
+        #bobo { 
+            position: absolute; 
+            bottom: 50px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            width: 350px; 
+            z-index: 5; 
+            transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+        }
+        
+        /* 食物：初始层级 z-index 为 10，确保在熊前面飞 */
+        .food { 
+            position: absolute; 
+            width: 90px; 
+            z-index: 10; 
+            transition: all 0.7s ease-in; 
+        }
+        
+        /* 食物摆放位置 */
+        #cake { top: 50px; left: 30px; }
+        #donut { top: 50px; right: 30px; }
+        #chocolate { bottom: 150px; left: -20px; }
+        #lollipop { bottom: 150px; right: -20px; }
+    </style>
+</head>
+<body>
+
+    <div id="subtitle">🎤 请允许麦克风，说：“想吃蛋糕”</div>
+
+    <div id="stage">
+        <img id="bobo" src="bobo_bear_main.png">
+        <img id="cake" class="food" src="cake.png">
+        <img id="donut" class="food" src="donut.png">
+        <img id="chocolate" class="food" src="chocolate.png">
+        <img id="lollipop" class="food" src="lollipop.png">
+    </div>
+
+<script>
+    // 1. 定义食物对象
+    const foods = {
+        '蛋糕': document.getElementById('cake'),
+        '甜甜圈': document.getElementById('donut'),
+        '巧克力': document.getElementById('chocolate'),
+        '棒棒糖': document.getElementById('lollipop')
+    };
+
+    // 2. 核心：启动语音识别
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
+        document.getElementById('subtitle').innerText = "❌ 浏览器不支持语音，请换用 Chrome";
+    } else {
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'zh-CN';
+        recognition.continuous = true; // 持续监听
+
+        recognition.onresult = (event) => {
+            const text = event.results[event.results.length - 1][0].transcript;
+            document.getElementById('subtitle').innerText = `BoBo 听到啦: "${text}"`;
+            
+            // 检查话里有没有关键词
+            for (let key in foods) {
+                if (text.includes(key)) {
+                    feedBoBo(foods[key]);
+                }
+            }
+        };
+
+        // 自动重连逻辑，防止识别中断
+        recognition.onend = () => recognition.start();
+        
+        recognition.start();
+    }
+
+    // 3. 喂食函数
+    function feedBoBo(foodItem) {
+        // 播放声音 (确保文件名叫 bobo_eat.mp3)
+        const audio = new Audio('bobo_eat.mp3');
+        audio.play().catch(e => console.log("音频播放受限或文件缺失"));
+
+        // 计算嘴巴位置：在 600x600 的容器里，熊嘴大概在中心偏下的位置
+        foodItem.style.top = "330px";  // 垂直位置：嘴部高度
+        foodItem.style.left = "255px"; // 水平位置：容器中心
+        foodItem.style.transform = "scale(0.1) rotate(360deg)"; // 旋转着变小消失
+        foodItem.style.opacity = "0";
+
+        // 熊的动作反馈
+        const bobo = document.getElementById('bobo');
+        setTimeout(() => {
+            bobo.style.transform = "translateX(-50%) scale(1.1)"; // 熊张嘴或兴奋变大
+            
+            setTimeout(() => {
+                bobo.style.transform = "translateX(-50%) scale(1)"; // 恢复原样
+                // 1.5秒后重置食物，准备下一次投喂
+                setTimeout(() => { foodItem.style = ""; }, 1500);
+            }, 300);
+        }, 400);
+    }
+</script>
+</body>
+</html>
